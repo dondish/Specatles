@@ -1,0 +1,15 @@
+plugins {
+    id 'java-library'
+}
+
+repositories {
+    jcenter()
+    maven { url 'https://jitpack.io' }
+}
+
+
+dependencies {
+    implementation 'io.vertx:vertx-amqp-client:3.7.0'// Used for the basic broker implementation
+    api 'com.mewna:catnip:1.2.2' // this is the external api
+    testImplementation 'junit:junit:4.12' // testing tools
+}

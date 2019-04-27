@@ -7,7 +7,9 @@ import io.reactivex.Flowable;
 import io.reactivex.Observable;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
-import io.vertx.reactivex.core.eventbus.MessageConsumer;
+import io.vertx.core.eventbus.MessageConsumer;
+import io.vertx.reactivex.FlowableHelper;
+import io.vertx.reactivex.ObservableHelper;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
@@ -34,15 +36,15 @@ public interface Broker {
      * @param events the event names to handle
      * @return The vertx message consumer to consume events
      */
-    public MessageConsumer<byte[]> on(@Nonnull final String... events);
+    public CompletableFuture<MessageConsumer<byte[]>> on(@Nonnull final String... events) throws Throwable;
 
     /**
      * Handles single or multiple events and returns a reactive stream
      * @param events the event names to handle
      * @return A vertx reactive stream
      */
-    default public Flowable<byte[]> flow(@Nonnull final String... events) {
-        return on(events).bodyStream().toFlowable();
+    default public CompletableFuture<Flowable<byte[]>> flow(@Nonnull final String... events) throws Throwable {
+        return on(events).thenApply(a -> FlowableHelper.toFlowable(a.bodyStream()));
     }
 
     /**
@@ -50,9 +52,9 @@ public interface Broker {
      * @param events the event names to handle
      * @return A vertx reactive stream
      */
-    default public Observable<byte[]> observe(@Nonnull final String... events) {
-        return on(events).bodyStream().toObservable();
+    default public CompletableFuture<Observable<byte[]>> observe(@Nonnull final String... events) throws Throwable {
+        return on(events).thenApply(a -> ObservableHelper.toObservable(a.bodyStream()));
     }
 
-    public CompletableFuture<byte[]> publish(@Nonnull final String event, @Nonnull final byte[] data);
+    public CompletableFuture<Void> publish(@Nonnull final String event, @Nonnull final byte[] data);
 }

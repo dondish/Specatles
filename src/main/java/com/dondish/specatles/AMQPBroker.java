@@ -1,7 +1,9 @@
 package com.dondish.specatles;
 
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
@@ -37,6 +39,7 @@ public class AMQPBroker implements Broker {
         CompletableFuture<AMQPBroker> cf = new CompletableFuture<>();
         client.start(ar -> {
             if (ar.failed()) {
+                logger.info("Failed to connect to the AMQP Server!");
                 cf.completeExceptionally(ar.cause());
             } else {
                 logger.info("Successfully Connected to the AMQP Server!");
@@ -105,24 +108,34 @@ public class AMQPBroker implements Broker {
                     });
                 }
             });
-
         }
 
         return cf;
     }
 
     @Override
-    public CompletableFuture<Void> publish(@Nonnull String event, @Nonnull byte[] data) {
+    public CompletableFuture<Void> publish(@Nonnull String event, @Nonnull JsonObject data) {
         CompletableFuture<Void> cf = new CompletableFuture<>();
 
-        client.basicPublish(group, event, new JsonObject(Buffer.buffer(data)), res -> {
-            if (res.failed()) {
-                cf.completeExceptionally(res.cause());
-            } else {
+        client.basicPublish(group, event, new JsonObject().put("body", data.toString()), res -> {
+            if (res.succeeded()) {
                 cf.complete(res.result());
+            } else {
+                res.cause().printStackTrace();
+                cf.completeExceptionally(new Throwable("Publish Failed."));
             }
         });
 
         return cf;
+    }
+
+    @Override
+    public void close(Handler<AsyncResult<Void>> completionHandler) {
+        disconnect()
+                .thenRun(() -> completionHandler.handle(Future.succeededFuture()))
+                .exceptionally(e -> {
+                    completionHandler.handle(Future.failedFuture(e));
+                    return null;
+                });
     }
 }

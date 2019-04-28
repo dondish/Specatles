@@ -2,4 +2,6 @@
 .gradle
 
 # Ignore Gradle build output directory
+src/test/**/TestConfig.java
+
 build

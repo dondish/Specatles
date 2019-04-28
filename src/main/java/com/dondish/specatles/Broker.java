@@ -5,9 +5,11 @@ package com.dondish.specatles;
 
 import io.reactivex.Flowable;
 import io.reactivex.Observable;
+import io.vertx.core.Closeable;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.MessageConsumer;
+import io.vertx.core.json.JsonObject;
 import io.vertx.reactivex.FlowableHelper;
 import io.vertx.reactivex.ObservableHelper;
 
@@ -17,33 +19,33 @@ import java.util.concurrent.CompletableFuture;
 /**
  * The basic broker interface to communicate with other modules
  */
-public interface Broker {
+public interface Broker extends Closeable {
 
     /**
      * The vertx instance
      * @return The vertx instance
      */
-    public Vertx vertx();
+    Vertx vertx();
 
     /**
      * The eventbus instance
      * @return The eventbus instance
      */
-    public EventBus eventBus();
+    EventBus eventBus();
 
     /**
      * Handles single or multiple events
      * @param events the event names to handle
      * @return The vertx message consumer to consume events
      */
-    public CompletableFuture<MessageConsumer<byte[]>> on(@Nonnull final String... events) throws Throwable;
+    CompletableFuture<MessageConsumer<byte[]>> on(@Nonnull final String... events) throws Throwable;
 
     /**
      * Handles single or multiple events and returns a reactive stream
      * @param events the event names to handle
      * @return A vertx reactive stream
      */
-    default public CompletableFuture<Flowable<byte[]>> flow(@Nonnull final String... events) throws Throwable {
+    default CompletableFuture<Flowable<byte[]>> flow(@Nonnull final String... events) throws Throwable {
         return on(events).thenApply(a -> FlowableHelper.toFlowable(a.bodyStream()));
     }
 
@@ -52,9 +54,9 @@ public interface Broker {
      * @param events the event names to handle
      * @return A vertx reactive stream
      */
-    default public CompletableFuture<Observable<byte[]>> observe(@Nonnull final String... events) throws Throwable {
+    default CompletableFuture<Observable<byte[]>> observe(@Nonnull final String... events) throws Throwable {
         return on(events).thenApply(a -> ObservableHelper.toObservable(a.bodyStream()));
     }
 
-    public CompletableFuture<Void> publish(@Nonnull final String event, @Nonnull final byte[] data);
+    CompletableFuture<Void> publish(@Nonnull final String event, @Nonnull final JsonObject data);
 }

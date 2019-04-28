@@ -3,12 +3,43 @@
  */
 package com.dondish.specatles;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import com.mewna.catnip.Catnip;
+import com.mewna.catnip.shard.DiscordEvent;
+import io.vertx.core.Vertx;
+import io.vertx.rabbitmq.RabbitMQOptions;
+import org.slf4j.LoggerFactory;
+
+import java.util.Arrays;
 
 public class LibraryTest {
-    @Test public void testSomeLibraryMethod() {
-        Library classUnderTest = new Library();
-        assertTrue("someLibraryMethod should return 'true'", classUnderTest.someLibraryMethod());
+    public static void main(String[] args) {
+        Catnip catnip = Catnip.catnip(TestConfig.TOKEN);
+        try {
+            new AMQPBroker(Vertx.vertx(), new RabbitMQOptions().setHost("localhost").setUser("guest").setPassword("guest"), "gateway", null).connect().thenApply(broker -> {
+                LoggerFactory.getLogger(LibraryTest.class).info("Broker Connected");
+
+                broker.on("ready").thenApply(messageConsumer -> {
+                    messageConsumer.handler(message -> {
+                        LoggerFactory.getLogger(LibraryTest.class).info(Arrays.toString(message.body()));
+                    });
+                    return messageConsumer;
+                });
+
+                catnip.on(DiscordEvent.READY, e -> broker.publish("ready", e.toJson())
+                        .thenRun(() -> LoggerFactory.getLogger(LibraryTest.class).info("Succeeded."))
+                        .exceptionally(er -> {
+                            LoggerFactory.getLogger(LibraryTest.class).error("Got an error:", er.fillInStackTrace());
+                            return null;
+                        })
+                );
+
+                catnip.connect();
+                return null;
+            });
+
+
+        } catch (Exception e) {
+            LoggerFactory.getLogger(LibraryTest.class).error(e.getMessage());
+        }
     }
 }

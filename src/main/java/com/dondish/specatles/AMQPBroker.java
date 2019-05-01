@@ -8,12 +8,14 @@ import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rabbitmq.RabbitMQClient;
+import io.vertx.rabbitmq.RabbitMQConsumer;
 import io.vertx.rabbitmq.RabbitMQOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.concurrent.CompletableFuture;
 
 public class AMQPBroker implements Broker {
@@ -42,8 +44,15 @@ public class AMQPBroker implements Broker {
                 logger.info("Failed to connect to the AMQP Server!");
                 cf.completeExceptionally(ar.cause());
             } else {
-                logger.info("Successfully Connected to the AMQP Server!");
-                cf.complete(this);
+                client.exchangeDeclare(group, "direct", true, false, a -> {
+                    if (a.failed()) {
+                        cf.completeExceptionally(a.cause());
+                    } else {
+                        logger.info("Successfully Connected to the AMQP Server!");
+                        cf.complete(this);
+                    }
+                });
+
             }
         });
         return cf;
@@ -74,7 +83,8 @@ public class AMQPBroker implements Broker {
     @Override
     public CompletableFuture<MessageConsumer<byte[]>> on(@Nonnull String... events) {
         CompletableFuture<MessageConsumer<byte[]>> cf = new CompletableFuture<>();
-        MessageConsumer<byte[]> consumer = eventBus().consumer(String.join("", Arrays.asList(events)));
+        final String address = String.join("", Arrays.asList(events));
+        MessageConsumer<byte[]> consumer = eventBus().consumer(address);
 
         for (int i = 0; i < events.length; i++) {
             String event = events[i];
@@ -92,16 +102,17 @@ public class AMQPBroker implements Broker {
                                 if (cres.failed())
                                     cf.completeExceptionally(cres.cause());
                                 else {
-                                    cres.result().handler(msg -> {
-                                        eventBus().publish(String.join("", Arrays.asList(events)), msg.body().getBytes());
-                                        client.basicAck(msg.envelope().deliveryTag(), false, ares -> {
-                                            if (c == events.length - 1){
-                                                cf.complete(consumer);
-                                            }
+                                    RabbitMQConsumer con = cres.result();
+                                    con.handler(msg -> {
+                                        eventBus().publish(address, Base64.getDecoder().decode(msg.body().getBytes()));
+                                        client.basicAck(msg.envelope().deliveryTag(), false, a -> {
                                         });
-                                    }
-                                    );
 
+                                    });
+                                    if (c == events.length - 1) {
+                                        cf.complete(consumer);
+                                    }
+                                    consumer.endHandler(a -> con.cancel());
                                 }
                             });
                         }
@@ -114,15 +125,13 @@ public class AMQPBroker implements Broker {
     }
 
     @Override
-    public CompletableFuture<Void> publish(@Nonnull String event, @Nonnull JsonObject data) {
+    public CompletableFuture<Void> publish(@Nonnull String event, @Nonnull byte[] data) {
         CompletableFuture<Void> cf = new CompletableFuture<>();
-
-        client.basicPublish(group, event, new JsonObject().put("body", data.toString()), res -> {
+        client.basicPublish(group, event, new JsonObject().put("body", data), res -> {
             if (res.succeeded()) {
                 cf.complete(res.result());
             } else {
-                res.cause().printStackTrace();
-                cf.completeExceptionally(new Throwable("Publish Failed."));
+                cf.completeExceptionally(res.cause());
             }
         });
 

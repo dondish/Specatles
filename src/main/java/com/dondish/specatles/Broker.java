@@ -9,7 +9,6 @@ import io.vertx.core.Closeable;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.MessageConsumer;
-import io.vertx.core.json.JsonObject;
 import io.vertx.reactivex.FlowableHelper;
 import io.vertx.reactivex.ObservableHelper;
 
@@ -58,5 +57,5 @@ public interface Broker extends Closeable {
         return on(events).thenApply(a -> ObservableHelper.toObservable(a.bodyStream()));
     }
 
-    CompletableFuture<Void> publish(@Nonnull final String event, @Nonnull final JsonObject data);
+    CompletableFuture<Void> publish(@Nonnull final String event, @Nonnull final byte[] data);
 }

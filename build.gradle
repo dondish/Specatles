@@ -9,9 +9,9 @@ repositories {
 
 
 dependencies {
-
     testCompile group: 'org.slf4j', name:'slf4j-simple', version: '1.7.26'
     implementation 'io.vertx:vertx-rabbitmq-client:3.7.0' // Used for the basic broker implementation
     api 'com.mewna:catnip:1.2.2' // this is the external api
     testImplementation 'junit:junit:4.12' // testing tools
+    testImplementation 'io.vertx:vertx-junit5:3.7.0'
 }

@@ -1,5 +1,7 @@
 language: java
 
+jdk: openjdk8
+
 before_cache:
   - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
   - rm -fr $HOME/.gradle/caches/*/plugin-resolution/
@@ -8,11 +10,8 @@ cache:
     - $HOME/.gradle/caches/
     - $HOME/.gradle/wrapper/
 
-install:
-  - gradle assemble
+install: gradle assemble
 
-before_script:
-  - gradle test
+before_script: gradle test
 
-script:
-  - gradle build
+script: gradle build

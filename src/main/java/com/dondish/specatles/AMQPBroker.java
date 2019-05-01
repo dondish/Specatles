@@ -18,18 +18,44 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Broker implementation using AMQP with RabbitMQ
+ */
 public class AMQPBroker implements Broker {
 
+    /**
+     * The Vertx instance for async flow
+     */
     private final Vertx vertx;
 
+    /**
+     * The RabbitMQ client
+     */
     private final RabbitMQClient client;
 
+    /**
+     * The group / exchange
+     */
     private final String group;
 
+    /**
+     * The subgroup (used to differentiate queues from one another)
+     */
     private final String subgroup;
 
+    /**
+     * The logger
+     */
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
+    /**
+     * Create a new AMQPBroker
+     *
+     * @param vertx    the vertx instance required for async operations
+     * @param options  the RabbitMQ options such as host and user
+     * @param group    the group (exchange)
+     * @param subgroup the subgroup (used to differentiate queues from one another)
+     */
     public AMQPBroker(@Nonnull Vertx vertx, @Nonnull RabbitMQOptions options, @Nonnull String group, String subgroup) {
         this.vertx = vertx;
         this.client = RabbitMQClient.create(vertx, options);
@@ -37,6 +63,10 @@ public class AMQPBroker implements Broker {
         this.subgroup = subgroup;
     }
 
+    /**
+     * Connect to the RabbitMQ server
+     * @return a future that will return this instance if succeeded otherwise an exception
+     */
     public CompletableFuture<AMQPBroker> connect() {
         CompletableFuture<AMQPBroker> cf = new CompletableFuture<>();
         client.start(ar -> {
@@ -58,6 +88,10 @@ public class AMQPBroker implements Broker {
         return cf;
     }
 
+    /**
+     * Disconnects from the RabbitMQ server
+     * @return a future that will return this instance if succeeded otherwise an exception
+     */
     public CompletableFuture<AMQPBroker> disconnect(){
         CompletableFuture<AMQPBroker> cf = new CompletableFuture<>();
         client.stop(ar -> {
